@@ -1,0 +1,10 @@
+{
+    "actorSpecification": 1,
+    "name": "women-in-tech-feed",
+    "title": "Women in Tech Inspiration Feed",
+    "description": "Collects recent posts about women in tech from Dev.to (JSON API) and Medium (RSS) into one inspiration stream.",
+    "version": "0.1",
+    "buildTag": "latest",
+    "input": "./input_schema.json",
+    "dockerfile": "../Dockerfile"
+}

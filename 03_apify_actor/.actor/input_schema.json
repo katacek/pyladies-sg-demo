@@ -1,0 +1,51 @@
+{
+    "title": "Women in Tech Inspiration Feed",
+    "type": "object",
+    "schemaVersion": 1,
+    "properties": {
+        "tags": {
+            "title": "Tags",
+            "type": "array",
+            "description": "Topics to follow. Each becomes a Dev.to tag (and a Medium RSS feed).",
+            "editor": "stringList",
+            "default": ["womenintech", "pyladies"],
+            "prefill": ["womenintech", "pyladies"]
+        },
+        "sources": {
+            "title": "Sources",
+            "type": "array",
+            "description": "Where to collect posts from.",
+            "editor": "select",
+            "items": {
+                "type": "string",
+                "enum": ["devto", "medium"],
+                "enumTitles": ["Dev.to (JSON API)", "Medium (RSS)"]
+            },
+            "default": ["devto", "medium"]
+        },
+        "maxAgeDays": {
+            "title": "Max age (days)",
+            "type": "integer",
+            "description": "Only keep posts published within this many days. Tip: #womenintech/#pyladies are sparse — 30 keeps the feed full; set 7 for a strict 'this week'.",
+            "default": 30,
+            "minimum": 1,
+            "maximum": 365
+        },
+        "minReactions": {
+            "title": "Minimum reactions",
+            "type": "integer",
+            "description": "Drop Dev.to posts below this many reactions (Medium posts have no count and are always kept).",
+            "default": 0,
+            "minimum": 0
+        },
+        "limit": {
+            "title": "Max items",
+            "type": "integer",
+            "description": "Maximum number of posts to save.",
+            "default": 50,
+            "minimum": 1,
+            "maximum": 500
+        }
+    },
+    "required": []
+}
