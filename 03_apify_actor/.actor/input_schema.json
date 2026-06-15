@@ -18,10 +18,10 @@
             "editor": "select",
             "items": {
                 "type": "string",
-                "enum": ["devto", "medium"],
-                "enumTitles": ["Dev.to (JSON API)", "Medium (RSS)"]
+                "enum": ["devto", "mastodon", "medium"],
+                "enumTitles": ["Dev.to (JSON API)", "Mastodon (JSON API)", "Medium (RSS)"]
             },
-            "default": ["devto", "medium"]
+            "default": ["devto", "mastodon", "medium"]
         },
         "maxAgeDays": {
             "title": "Max age (days)",
@@ -30,13 +30,6 @@
             "default": 30,
             "minimum": 1,
             "maximum": 365
-        },
-        "minReactions": {
-            "title": "Minimum reactions",
-            "type": "integer",
-            "description": "Drop Dev.to posts below this many reactions (Medium posts have no count and are always kept).",
-            "default": 0,
-            "minimum": 0
         },
         "limit": {
             "title": "Max items",

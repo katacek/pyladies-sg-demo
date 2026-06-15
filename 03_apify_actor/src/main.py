@@ -3,6 +3,7 @@
 Collects recent posts about women in tech and turns them into one stream:
 
   Level 1 (API):  Dev.to publishes a clean JSON API        -> source "devto"
+  Level 1 (API):  Mastodon's public REST API (no auth)      -> source "mastodon"
   Level 3 (RSS):  Medium blocks scrapers, so we use its RSS -> source "medium"
 
 Each post is normalized to the same shape and pushed to the dataset.
@@ -20,11 +21,15 @@ import httpx
 
 from apify import Actor
 
-DEVTO_API = "https://dev.to/api/articles"
+# /articles/latest sorts strictly newest-first (getLatestArticles in the Forem docs).
+# Plain /articles sorts by popularity, so recent posts get buried past per_page on busy
+# tags — and we're about to filter by date, so we want the genuinely latest ones.
+DEVTO_API = "https://dev.to/api/articles/latest"
+MASTODON_TAG = "https://mastodon.social/api/v1/timelines/tag/{tag}"
 MEDIUM_FEED = "https://medium.com/feed/tag/{tag}"
 
 # Common shape every source maps to:
-#   name, excerpt, link, tags, source, published_at (ISO), reactions, cover_image
+#   name, excerpt, link, tags, source, published_at (ISO), cover_image
 
 
 def _clean(text: str | None) -> str:
@@ -59,8 +64,34 @@ async def fetch_devto(client: httpx.AsyncClient, tag: str, per_page: int = 30) -
                 "tags": a.get("tag_list", []),
                 "source": "dev.to",
                 "published_at": a.get("published_at"),
-                "reactions": a.get("public_reactions_count", 0),
                 "cover_image": a.get("cover_image"),
+            }
+        )
+    return posts
+
+
+async def fetch_mastodon(client: httpx.AsyncClient, tag: str, limit: int = 40) -> list[dict]:
+    """Level 1 — Mastodon's public REST API. No auth, clean JSON.
+
+    This is the source you can *discover live* in DevTools: open
+    mastodon.social/tags/<tag>, watch this exact endpoint fire under Network.
+    """
+    # limit maxes out at 40 per request; the page UI omits `local` (= federated view).
+    resp = await client.get(MASTODON_TAG.format(tag=tag), params={"limit": limit})
+    resp.raise_for_status()
+    posts = []
+    for s in resp.json():
+        media = s.get("media_attachments") or []
+        posts.append(
+            {
+                "name": s.get("account", {}).get("display_name"),
+                # content is HTML, just like Medium summaries -> reuse _clean.
+                "excerpt": _clean(s.get("content"))[:280],
+                "link": s.get("url"),
+                "tags": [t["name"] for t in s.get("tags", [])],
+                "source": "mastodon",
+                "published_at": s.get("created_at"),
+                "cover_image": media[0].get("preview_url") if media else None,
             }
         )
     return posts
@@ -82,7 +113,6 @@ def _parse_medium(feed_bytes: bytes) -> list[dict]:
                 "tags": [t["term"] for t in getattr(e, "tags", [])],
                 "source": "medium",
                 "published_at": published,
-                "reactions": None,
                 "cover_image": None,
             }
         )
@@ -105,9 +135,8 @@ async def main() -> None:
         # storage/key_value_stores/default/INPUT.json). The `or [...]` are fallbacks.
         actor_input = await Actor.get_input() or {}
         tags = actor_input.get("tags") or ["womenintech"]
-        sources = actor_input.get("sources") or ["devto"]
+        sources = actor_input.get("sources") or ["devto", "mastodon", "medium"]
         max_age_days = actor_input.get("maxAgeDays", 30)
-        min_reactions = actor_input.get("minReactions", 0)
         limit = actor_input.get("limit", 50)
 
         cutoff = datetime.now(timezone.utc) - timedelta(days=max_age_days)
@@ -125,20 +154,22 @@ async def main() -> None:
                         collected += await fetch_devto(client, tag)
                     except httpx.HTTPError as exc:
                         Actor.log.warning(f"Dev.to failed for #{tag}: {exc}")
+                if "mastodon" in sources:
+                    try:
+                        collected += await fetch_mastodon(client, tag)
+                    except httpx.HTTPError as exc:
+                        Actor.log.warning(f"Mastodon failed for #{tag}: {exc}")
                 if "medium" in sources:
                     try:
                         collected += await fetch_medium(client, tag)
                     except Exception as exc:  # feedparser is forgiving; be defensive anyway
                         Actor.log.warning(f"Medium failed for #{tag}: {exc}")
 
-        # Step 2 — FILTER: keep only recent posts, and (for Dev.to) popular enough ones.
-        # Medium has no reaction count -> p["reactions"] is None -> always kept.
+        # Step 2 — FILTER: keep only recent posts (newer than the cutoff).
         filtered = []
         for p in collected:
             published = _parse_dt(p["published_at"])
             if published and published < cutoff:
-                continue
-            if p["reactions"] is not None and p["reactions"] < min_reactions:
                 continue
             filtered.append(p)
 

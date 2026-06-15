@@ -43,26 +43,19 @@ point: **HTML scrapers break when the site redesigns; APIs are far more stable.*
 
 ---
 
-## ⭐ The key move: find the hidden API in DevTools
+## ⭐ The key move: get JSON from an API instead of parsing HTML
 
-Most sites that feel "dynamic" are quietly calling a JSON API in the background. You can
-watch it happen, then call that same API yourself — no HTML parsing needed. This is the
-single most useful habit in the whole talk.
+If you can get data as JSON, you skip HTML parsing entirely — no fragile selectors, nothing to break when the site redesigns. Finding that API is the single most useful habit in the whole talk. There are two ways to do it.
 
-Try it on Dev.to (the source behind `02_devto_api.py`):
+### Way 1 — read the docs (the easy win): Dev.to
 
-1. Open [dev.to/t/womenintech](https://dev.to/t/womenintech) in your browser
-2. Press **F12** to open DevTools
-3. Go to the **Network** tab
-4. Filter by **Fetch/XHR**
-5. Reload the page (or scroll to load more posts)
-6. Look for a request to `/api/articles` — that's the site talking to its own API
-
-Open it in a new tab and you get clean JSON straight back:
+Dev.to publishes a **documented public API** — you don't need DevTools at all. Open this straight in your browser:
 
 ```
-GET https://dev.to/api/articles?tag=womenintech&per_page=30
+https://dev.to/api/articles?tag=womenintech&per_page=30
 ```
+
+Clean JSON comes straight back, no key needed:
 
 ```json
 [
@@ -76,16 +69,37 @@ GET https://dev.to/api/articles?tag=womenintech&per_page=30
 ]
 ```
 
-No HTML, no fragile selectors. 🎉 That's exactly what `02_devto_api.py` and the Actor do.
-When a site has **no** API (like the PyLadies chapters page), you fall back to parsing HTML —
-that's `01_pyladies_html_scrape.py`.
+That's exactly what `02_devto_api.py` and the Actor call. 🎉
+
+> 📚 **Where are the docs?** Dev.to runs on the open-source **Forem** platform, so its API isn't documented on dev.to itself — it lives at [developers.forem.com/api](https://developers.forem.com/api) (see the *Articles* endpoint).
+> The docs describe the path (`/api/articles`); the host is just the Forem instance you hit — for us, `dev.to`.
+
+> 💡 Dev.to actually **server-renders its pages** (the HTML already contains the posts, and even pagination loads a fresh HTML page), so you *won't* see this API fire in the Network tab — the site doesn't call it from the browser. We found it from the docs, not by hunting.
+> That's a perfectly good outcome: **check for a documented API first.**
+
+### Way 2 — hunt for a hidden API in DevTools
+
+Many sites *don't* document an API but quietly call one in the background. You can watch it happen, then call that same endpoint yourself. **Mastodon** — a source in our Actor — is a perfect example, because its web app is client-rendered (it loads data with JavaScript):
+
+1. Open [mastodon.social/tags/womenintech](https://mastodon.social/tags/womenintech)
+2. Press **F12** → **Network** tab → filter **Fetch/XHR**
+3. Reload, or scroll to load more posts
+4. Watch a request to `/api/v1/timelines/tag/womenintech` appear — the site fetching its own posts as JSON. Open it in a new tab → clean JSON straight back:
+
+```
+GET https://mastodon.social/api/v1/timelines/tag/womenintech?limit=40
+```
+```json
+[ { "account": {"display_name": "..."}, "content": "<p>...</p>", "url": "https://...", "tags": [{"name": "womenintech"}], "created_at": "2026-06-15T11:40:10Z" } ]
+```
+
+That's the whole skill — and the payoff: the endpoint you just found by hand is exactly the one `fetch_mastodon()` in the Actor calls. When a page feels dynamic, check **Network → Fetch/XHR** *before* you reach for BeautifulSoup. When a site has **no** API at all (like the PyLadies chapters page), *then* you fall back to parsing HTML — that's `01_pyladies_html_scrape.py`.
 
 ---
 
 ## The Actor (Level 3 finale)
 
-`03_apify_actor/` wraps everything into a deployable cloud Actor that pulls from **Dev.to
-(API)** and **Medium (RSS)** at once, filters, dedupes, and saves the feed.
+`03_apify_actor/` wraps everything into a deployable cloud Actor that pulls from **Dev.to (API)**, **Mastodon (API)**, and **Medium (RSS)** at once, filters, dedupes, and saves the feed.
 
 ```bash
 npm install -g apify-cli      # one-time
@@ -102,6 +116,7 @@ reference, code walkthrough, deploy/schedule steps, and troubleshooting live in
 ## The 3 sources = the 3 levels
 
 - **Dev.to** publishes a documented JSON API → *Level 1 (API)*.
+- **Mastodon** exposes a public JSON API (the one you can find live in DevTools) → *Level 1 (API)*.
 - **PyLadies / conference pages** are plain HTML → *Level 2 (parse HTML)*.
 - **Medium** is JS-heavy and blocks scrapers → *Level 3* → we use its **RSS feed**.
 

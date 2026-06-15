@@ -12,10 +12,10 @@ deploy to the cloud and run on a schedule. ← **start with the [demo hub README
 
 ## What does it do?
 
-You give it a few **tags** and it pulls recent posts from two sources, normalizes them
-into one shape, drops stale/duplicate ones, and saves the rest to a dataset:
+You give it a few **tags** and it pulls recent posts from three sources, normalizes them into one shape, drops stale/duplicate ones, and saves the rest to a dataset:
 
 - **Dev.to** → official JSON API → *Level 1* (`source: "dev.to"`)
+- **Mastodon** → public JSON API, no auth → *Level 1* (`source: "mastodon"`)
 - **Medium** → blocks scrapers, so we read its RSS feed → *Level 3* (`source: "medium"`)
 
 The result is a tidy, exportable feed of inspiration you could email yourself every Monday.
@@ -41,10 +41,9 @@ Configure these in the Apify Console UI, or in a local `INPUT.json` (see below).
 
 | Field | Type | Default | What it does |
 |---|---|---|---|
-| `tags` | string[] | `["womenintech", "pyladies"]` | Topics to follow. Each becomes a Dev.to tag **and** a Medium RSS feed. |
-| `sources` | string[] | `["devto", "medium"]` | Where to collect from: `devto`, `medium`, or both. |
+| `tags` | string[] | `["womenintech", "pyladies"]` | Topics to follow. Each becomes a Dev.to tag, a Mastodon hashtag, **and** a Medium RSS feed. |
+| `sources` | string[] | `["devto", "mastodon", "medium"]` | Where to collect from: any of `devto`, `mastodon`, `medium`. |
 | `maxAgeDays` | integer | `30` | Keep only posts newer than this. #womenintech/#pyladies are sparse — bump to 90 if the feed looks empty. |
-| `minReactions` | integer | `0` | Drop Dev.to posts below this many reactions. (Medium has no count → always kept.) |
 | `limit` | integer | `50` | Max posts to save. |
 
 > ⚠️ **Tags are a union (OR), not an intersection.** `["womenintech", "python"]` returns
@@ -61,9 +60,8 @@ One item per post, every source normalized to the same shape:
 | `excerpt` | short summary (HTML stripped) |
 | `link` | URL to the post |
 | `tags` | `["womenintech", "career"]` |
-| `source` | `"dev.to"` or `"medium"` |
+| `source` | `"dev.to"`, `"mastodon"`, or `"medium"` |
 | `published_at` | ISO 8601 timestamp |
-| `reactions` | integer (Dev.to) or `null` (Medium) |
 | `cover_image` | URL or `null` |
 
 ---
@@ -87,7 +85,7 @@ To customize the input for `python -m src`, create
 `storage/key_value_stores/default/INPUT.json`:
 
 ```json
-{ "tags": ["womenintech", "pyladies"], "sources": ["devto", "medium"], "maxAgeDays": 90 }
+{ "tags": ["womenintech", "pyladies"], "sources": ["devto", "mastodon", "medium"], "maxAgeDays": 90 }
 ```
 
 Results land in `storage/datasets/default/*.json` — one file per post.
@@ -102,17 +100,21 @@ Results land in `storage/datasets/default/*.json` — one file per post.
 The whole Actor is in [`src/main.py`](src/main.py), and `main()` reads as a 4-step pipeline:
 
 ```
-COLLECT  → for each tag, fetch each source (Dev.to API + Medium RSS) into one list
-FILTER   → drop posts older than maxAgeDays, and Dev.to posts below minReactions
+COLLECT  → for each tag, fetch each source (Dev.to API + Mastodon API + Medium RSS) into one list
+FILTER   → drop posts older than maxAgeDays
 DEDUPE   → same post can appear under two tags; keep one, sort newest-first
 OUTPUT   → Actor.push_data() writes each item to the dataset
 ```
 
-Three building blocks, mirroring the two teaching scripts:
+The building blocks mirror the teaching scripts:
 
 ```python
 # Level 1 — the easy win: data already arrives as clean JSON
 resp = await client.get(DEVTO_API, params={"tag": tag, "per_page": 30})
+posts = resp.json()
+
+# Level 1 — Mastodon's public API (the one you can find live in DevTools)
+resp = await client.get(MASTODON_TAG.format(tag=tag), params={"limit": 40})
 posts = resp.json()
 
 # Level 3 — Medium blocks scrapers, so we read its RSS feed instead
