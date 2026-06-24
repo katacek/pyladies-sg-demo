@@ -1,19 +1,19 @@
-# Web scraping for PyLadies — demo code
+# Web scraping for PyLadies - demo code
 
-Companion repo for the *"Apify Web Scraping & Parsing Workshop"*
+Companion repo for the *"Apify web scraping and parsing Workshop"*
 (PyLadies @ PyCon Singapore).
 
-We build a **Women in Tech Inspiration Feed**: recent posts about women in tech,
+We build a **Women in tech inspiration feed**: recent posts about women in tech,
 collected into one stream. Along the way we hit all **3 levels of getting data**:
 
 | File | Level | What it shows |
 |------|-------|---------------|
-| `02_devto_api.py`   | 1 — API  | Use Dev.to's clean JSON API. The easy win. |
-| `01_pyladies_html_scrape.py` | 2 — HTML | Parse a page with BeautifulSoup (PyLadies chapters). Fragile! |
+| `02_devto_api.py`   | 1 - API  | Use Dev.to's clean JSON API. The easy win. |
+| `01_pyladies_html_scrape.py` | 2 - HTML | Parse a page with BeautifulSoup (PyLadies chapters). Fragile! |
 | `03_apify_actor/`   | all      | Wrap it as a cloud Actor: input → dataset → schedule. |
 
 > New here? Read top-to-bottom. The golden rule of the whole talk:
-> **always check for an API before you parse HTML.**
+> **Always check for an API before you parse HTML.**
 
 ---
 
@@ -37,8 +37,8 @@ python 02_devto_api.py     # Level 1 — the API
 python 01_pyladies_html_scrape.py   # Level 2 — HTML
 ```
 
-`02` returns clean JSON with no parsing. `01` digs data out of HTML with a CSS selector —
-then *try breaking the selector* and watch it return 0 results. That fragility is the whole
+`02` returns clean JSON with no parsing. `01` digs data out of HTML with a CSS selector -
+Then *try breaking the selector* and watch it return 0 results. That fragility is the whole
 point: **HTML scrapers break when the site redesigns; APIs are far more stable.**
 
 ---
@@ -125,13 +125,13 @@ reference, code walkthrough, deploy/schedule steps, and troubleshooting live in
 ## Try it yourself 🚀
 
 Three challenges, easy → hard (swap the feed, enrich the data, make it your own Actor):
-see **[`EXERCISES.md`](EXERCISES.md)**. Fork the repo and give one a go this week.
+see **[`EXERCISES.md`](EXERCISES.md)**. Fork the repo and give it a go this week.
 
 ---
 
 ## Be a good citizen
 
-Public data, but: read `robots.txt`, don't hammer servers, always link back and
+Public data, but: read `robots.txt`, don't hammer servers, always link back, and
 attribute, and never resell people's content.
 
 ---
@@ -142,38 +142,38 @@ attribute, and never resell people's content.
 extracting the relevant parts from the response (HTML or JSON).
 
 **Server** — A computer (or program) that listens for requests over the internet and sends
-back a response. Opening a website = your browser asks a server, the server replies with the page.
+back a response. Opening a website = your browser asks a server, and the server replies with the page.
 
 **API (Application Programming Interface)** — A formal agreement between two programs on how
 to exchange data: what you can ask for, how to ask, and what format the answer comes in.
 Dev.to's public API gives us clean JSON instead of HTML to dig through.
 
-**Parsing** — Analyzing structured text (HTML or JSON) to pull out specific pieces of data.
+**Parsing** - Analyzing structured text (HTML or JSON) to pull out specific pieces of data.
 With no API, you parse the raw HTML to find what you need (that's BeautifulSoup in `01`).
 
-**CSS selector** — A pattern like `div.chapter_location` that points at elements in a page.
+**CSS selector** - A pattern like `div.chapter_location` that points at elements in a page.
 Parsing libraries use them to locate the data; they break when the site's markup changes.
 
-**JS-rendered site** — A site that builds its content in the browser with JavaScript. A plain
+**JS-rendered site** - A site that builds its content in the browser with JavaScript. A plain
 HTTP request returns only an empty shell — the data isn't in the source HTML at all.
 
-**Headless browser** — A real browser running with no visible window (loads pages, runs JS).
+**Headless browser** - A real browser running with no visible window (loads pages, runs JS).
 Used to scrape JS-rendered sites when there's no API and no RSS to fall back on.
 
-**RSS feed** — A standardized XML feed of a site's latest content. When a site blocks scrapers
+**RSS feed** - A standardized XML feed of a site's latest content. When a site blocks scrapers
 but still publishes RSS (like Medium), it's a clean, allowed way in.
 
-**Proxy** — An intermediary server between you and the target site, so the site sees its IP
+**Proxy** - An intermediary server between you and the target site, so the site sees its IP
 instead of yours. Used to avoid IP bans when scraping at scale.
 
-**Actor** — Apify's name for a containerized program you can run in the cloud, give input, and
+**Actor** - Apify's name for a containerized program you can run in the cloud, give input, and
 schedule. Our scraper is packaged as one in `03_apify_actor/`.
 
 ---
 
 ## Resources
 
-- [Apify Academy — Web scraping for beginners](https://docs.apify.com/academy/web-scraping-for-beginners)
+- [Apify Academy - Web scraping for beginners](https://docs.apify.com/academy/web-scraping-for-beginners)
 - [Apify Python SDK docs](https://docs.apify.com/sdk/python/)
-- [Apify Store — thousands of ready-made Actors](https://apify.com/store)
+- [Apify Store - thousands of ready-made Actors](https://apify.com/store)
 - The PyLadies community 💜
